@@ -3,30 +3,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AppStoreConnectClient } from "./asc/client.js";
 import { registerFeedbackTools } from "./tools/feedback.js";
 import { registerAppTools } from "./tools/apps.js";
-import { registerTesterTools } from "./tools/testers.js";
-import { registerAnalyticsTools } from "./tools/analytics.js";
-import { registerProvisioningTools } from "./tools/provisioning.js";
-import { registerMetadataTools } from "./tools/metadata.js";
 import { registerTestFlightTools } from "./tools/testflight.js";
-import { registerDiagnosticsTools } from "./tools/diagnostics.js";
-import { registerCiTools } from "./tools/ci.js";
-import { registerScreenshotTools } from "./tools/screenshots.js";
-import { registerListingTools } from "./tools/listing.js";
 
 const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 
-export function createServer(client: AppStoreConnectClient, vendorNumber?: string): McpServer {
+export function createServer(client: AppStoreConnectClient): McpServer {
   const server = new McpServer({ name: "testflight-mcp", version });
   registerFeedbackTools(server, client);
   registerAppTools(server, client);
   registerTestFlightTools(server, client);
-  registerTesterTools(server, client);
-  registerAnalyticsTools(server, client, vendorNumber);
-  registerProvisioningTools(server, client);
-  registerMetadataTools(server, client);
-  registerDiagnosticsTools(server, client);
-  registerCiTools(server, client);
-  registerScreenshotTools(server, client);
-  registerListingTools(server, client);
   return server;
 }

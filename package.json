@@ -1,7 +1,8 @@
 {
   "name": "@orellbuehler/testflight-mcp",
-  "version": "0.4.0",
-  "description": "Model Context Protocol server for TestFlight & App Store Connect: retrieve beta tester feedback (screenshots, crashes, crash logs), builds, testers, analytics and provisioning over the official App Store Connect API.",
+  "version": "0.4.0-locins.1",
+  "private": true,
+  "description": "Read-only Locins fork of testflight-mcp: TestFlight beta feedback (screenshots, crashes, crash logs) and build context over the official App Store Connect API.",
   "type": "module",
   "bin": {
     "testflight-mcp": "dist/index.js"
@@ -44,9 +45,6 @@
   "homepage": "https://github.com/OrellBuehler/testflight-mcp#readme",
   "bugs": {
     "url": "https://github.com/OrellBuehler/testflight-mcp/issues"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

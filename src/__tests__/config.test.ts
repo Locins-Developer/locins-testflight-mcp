@@ -14,11 +14,9 @@ describe("config", () => {
     vi.stubEnv("ASC_KEY_ID", "KEY123");
     vi.stubEnv("ASC_ISSUER_ID", "ISSUER-1");
     vi.stubEnv("ASC_PRIVATE_KEY", "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----");
-    vi.stubEnv("ASC_VENDOR_NUMBER", "80001234");
     const { config, client } = await import("../config.js");
     expect(config.keyId).toBe("KEY123");
     expect(config.issuerId).toBe("ISSUER-1");
-    expect(config.vendorNumber).toBe("80001234");
     expect(config.transport).toBe("stdio");
     expect(client).toBeDefined();
   });
@@ -29,7 +27,7 @@ describe("config", () => {
     vi.stubEnv("ASC_PRIVATE_KEY", "");
     vi.stubEnv("ASC_PRIVATE_KEY_PATH", "/tmp/AuthKey.p8");
     const { config } = await import("../config.js");
-    expect(config.vendorNumber).toBeUndefined();
+    expect(config.keyId).toBe("KEY123");
   });
 
   it("exits when required env vars are missing", async () => {

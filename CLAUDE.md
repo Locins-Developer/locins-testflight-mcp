@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A STDIO MCP server that exposes the **official App Store Connect API** as read-only tools (plus App Store listing edits) for AI
-agents, centered on **TestFlight beta feedback retrieval** (screenshot feedback, crash feedback,
-crash logs) and surrounding context (apps, builds, testers/groups, analytics & sales reports,
-provisioning, App Store metadata). Published to npm as `@orellbuehler/testflight-mcp` and run via
-`npx`; the compiled `dist/index.js` is the `bin` entry. See `README.md` for the tool catalog and
-env-var reference.
+The Locins fork of `OrellBuehler/testflight-mcp`: a STDIO MCP server that exposes the **official App
+Store Connect API** as strictly read-only tools for AI agents, limited to **TestFlight beta feedback
+retrieval** (screenshot feedback, crash feedback, crash logs) and the build context around it (apps,
+builds, TestFlight build status and metrics). Not published to npm (`private`); run from a local
+build of `dist/index.js`. See `README.md` for the tool catalog, env vars and what differs from
+upstream.
 
 ## Commands
 
@@ -48,19 +48,16 @@ vendorNumber)`, and connects it over stdio. Each tool calls the App Store Connec
 - **`src/asc/client.ts`** — `AppStoreConnectClient`, a thin `fetch` wrapper over
   `https://api.appstoreconnect.apple.com/v1`. `get`/`getAll` (cursor pagination via `links.next`),
   `getJson` (raw body + optional extra headers, for the non-JSON:API metrics/diagnostics endpoints),
-  `post`, `downloadText`/`downloadBinary` (presigned asset URLs — **no** auth header),
-  `downloadGzipText` (analytics segments), `getGzippedReport` (gzipped sales/finance CSV). Throws on
-  non-2xx with the response body in the message.
+  `downloadBinary` (presigned screenshot URLs — **no** auth header). Refuses to send the token to any
+  origin other than `https://api.appstoreconnect.apple.com`. Throws on non-2xx with the response body
+  in the message.
 - **`src/asc/format.ts`** — shared helpers: `ok`/`err` (MCP content envelopes; `ok` passes strings
   through unquoted), `imageResult`, and JSON:API helpers `singleRef`, `manyRefs`, `findIncluded`,
   `flattenResource`, `shapeResource` (lift `attributes` to top level + resolve named relationships
   from `included`).
 - **`src/tools/*.ts`** — each exports a `register*Tools(server, client)` function that `server.ts`
   calls: `feedback`, `apps`, `testflight` (build beta state, "What to Test", TestFlight usage
-  metrics), `testers`, `analytics` (also takes the default vendor number), `provisioning`,
-  `metadata` (App Store versions + review pipeline), `diagnostics` (perf/power metrics, diagnostic
-  signatures and logs), `ci` (Xcode Cloud), `screenshots` (App Store screenshot sets + upload), `listing` (App Information, age rating,
-  version text — writes).
+  metrics).
 
 ## Conventions
 
@@ -75,16 +72,11 @@ ok(...); } catch (e) { return err(e); } })`. The third argument is a raw Zod sha
   field names like `timestamp`/`screenshotAsset`; the real fields are `createdDate`/`screenshots[]`.)
 - **Don't add comments, docstrings, or type annotations** unless they already exist in the file
   you're editing (per global preference).
-- **Scope is read-only retrieval.** Do not add tools that mutate App Store Connect (no add/remove
-  tester, no app-store-version create/update, no app submission). The deliberate exception is the
-  App Store listing: `tools/listing.ts` (`update_*`: App Information, categories, age rating, version
-  string/copyright/release type, version localization text) and `upload_app_screenshots`
-  (`tools/screenshots.ts`). Keep writes confined to listing metadata — still no testers, builds or
-  submission. The other `POST` is
-  `create_analytics_report_request`, which only requests a report snapshot to _read_ analytics — it
-  does not modify the app. **Deliberately excluded** (and must not be re-added from the upstream
-  reference projects): Apple-ID-password browser/Playwright scraping of the internal `iris` API, and
-  SMTP "respond to tester" email.
+- **Scope is read-only feedback retrieval.** Do not add tools or client methods that mutate App Store
+  Connect (no `post`/`patch`/`delete`), and do not bring back the modules this fork removed
+  (analytics, provisioning, metadata, diagnostics, ci, screenshots, listing, testers) when merging
+  upstream. **Deliberately excluded:** Apple-ID-password browser/Playwright scraping of the internal
+  `iris` API, and SMTP "respond to tester" email.
 - **Secrets:** the repo is public. Never log the `.p8` key or tokens; only read them from env. Tests
   use a locally generated throwaway EC key. Review-detail endpoints expose a `demoAccountPassword`
   field — it is deliberately left out of every `fields[...]` list; don't add it back.

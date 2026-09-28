@@ -1,7 +1,7 @@
-import { gunzipSync } from "node:zlib";
 import type { TokenProvider } from "./jwt.js";
 
-export const BASE_URL = "https://api.appstoreconnect.apple.com/v1";
+const API_ORIGIN = "https://api.appstoreconnect.apple.com";
+export const BASE_URL = `${API_ORIGIN}/v1`;
 
 export interface JsonApiRef {
   type: string;
@@ -52,6 +52,9 @@ export class AppStoreConnectClient {
   }
 
   private async request(url: string, options: RequestInit = {}): Promise<Response> {
+    if (new URL(url).origin !== API_ORIGIN) {
+      throw new Error(`Refusing to send App Store Connect credentials to ${new URL(url).origin}`);
+    }
     const token = await this.tokenProvider();
     let res: Response;
     try {
@@ -60,7 +63,6 @@ export class AppStoreConnectClient {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
-          ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
           ...((options.headers as Record<string, string>) ?? {}),
         },
         signal: options.signal ?? AbortSignal.timeout(this.timeoutMs),
@@ -114,47 +116,6 @@ export class AppStoreConnectClient {
     return { data, included };
   }
 
-  async post(path: string, body: unknown): Promise<JsonApiResponse> {
-    const res = await this.request(this.buildUrl(path), {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    return res.json() as Promise<JsonApiResponse>;
-  }
-
-  async patch(path: string, body: unknown): Promise<JsonApiResponse> {
-    const res = await this.request(this.buildUrl(path), {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    });
-    return res.json() as Promise<JsonApiResponse>;
-  }
-
-  async delete(path: string): Promise<void> {
-    await this.request(this.buildUrl(path), { method: "DELETE" });
-  }
-
-  async uploadPart(
-    url: string,
-    method: string,
-    headers: Record<string, string>,
-    body: Uint8Array,
-  ): Promise<void> {
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: new Uint8Array(body),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: failed to upload part`);
-  }
-
-  async downloadText(url: string): Promise<string> {
-    const res = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: failed to download ${url}`);
-    return res.text();
-  }
-
   async downloadBinary(url: string): Promise<{ base64: string; mimeType: string }> {
     const res = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}: failed to download ${url}`);
@@ -163,28 +124,5 @@ export class AppStoreConnectClient {
       base64: buf.toString("base64"),
       mimeType: res.headers.get("content-type") ?? "image/png",
     };
-  }
-
-  async downloadGzipText(url: string): Promise<string> {
-    const res = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: failed to download ${url}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    try {
-      return gunzipSync(buf).toString("utf-8");
-    } catch {
-      return buf.toString("utf-8");
-    }
-  }
-
-  async getGzippedReport(path: string, params: QueryParams): Promise<string> {
-    const res = await this.request(this.buildUrl(path, params), {
-      headers: { Accept: "application/a-gzip, application/json" },
-    });
-    const buf = Buffer.from(await res.arrayBuffer());
-    try {
-      return gunzipSync(buf).toString("utf-8");
-    } catch {
-      return buf.toString("utf-8");
-    }
   }
 }

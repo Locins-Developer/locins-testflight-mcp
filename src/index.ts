@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { client, config } from "./config.js";
+import { client } from "./config.js";
 import { createServer } from "./server.js";
 
-const server = createServer(client, config.vendorNumber);
+const server = createServer(client);
 const transport = new StdioServerTransport();
 try {
   await server.connect(transport);

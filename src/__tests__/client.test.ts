@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { gzipSync } from "node:zlib";
 import { AppStoreConnectClient } from "../asc/client.js";
 
 function mockJson(body: unknown) {
@@ -110,28 +109,11 @@ describe("AppStoreConnectClient", () => {
     await expect(client.get("/apps")).rejects.toThrow(/timed out after/);
   });
 
-  it("post sends a JSON body with the right method and content type", async () => {
-    mockFetch.mockResolvedValueOnce(
-      mockJson({ data: { type: "analyticsReportRequests", id: "r1" } }),
+  it("refuses to send the bearer token to any other origin", async () => {
+    await expect(client.get("https://evil.example.com/v1/apps")).rejects.toThrow(
+      "Refusing to send App Store Connect credentials to https://evil.example.com",
     );
-    await client.post("/analyticsReportRequests", { data: { type: "analyticsReportRequests" } });
-    const [, options] = mockFetch.mock.calls[0];
-    expect(options.method).toBe("POST");
-    expect((options.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
-    expect(options.body).toBe(JSON.stringify({ data: { type: "analyticsReportRequests" } }));
-  });
-
-  it("downloadText fetches a presigned URL without an auth header", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      headers: new Headers(),
-      text: () => Promise.resolve("crash log body"),
-    });
-    expect(await client.downloadText("https://example.com/log")).toBe("crash log body");
-    const [, options] = mockFetch.mock.calls[0];
-    expect(options?.headers).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("downloadBinary returns base64 plus the content type", async () => {
@@ -139,18 +121,5 @@ describe("AppStoreConnectClient", () => {
     const { base64, mimeType } = await client.downloadBinary("https://example.com/shot.jpg");
     expect(base64).toBe(Buffer.from([1, 2, 3, 4]).toString("base64"));
     expect(mimeType).toBe("image/jpeg");
-  });
-
-  it("getGzippedReport decompresses a gzip report body to text", async () => {
-    mockFetch.mockResolvedValueOnce(
-      mockBytes(gzipSync(Buffer.from("a,b,c\n1,2,3\n")), "application/a-gzip"),
-    );
-    const csv = await client.getGzippedReport("/salesReports", { "filter[vendorNumber]": "1" });
-    expect(csv).toBe("a,b,c\n1,2,3\n");
-  });
-
-  it("downloadGzipText decompresses a presigned gzip segment", async () => {
-    mockFetch.mockResolvedValueOnce(mockBytes(gzipSync(Buffer.from("segment-data"))));
-    expect(await client.downloadGzipText("https://example.com/seg")).toBe("segment-data");
   });
 });
